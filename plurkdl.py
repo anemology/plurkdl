@@ -42,8 +42,13 @@ def parse_plurks(response_json, f):
         post_time = change_timezone_local(plurk["posted"])
         replaced_newline = " "
         # replaced_newline = "\n                     "
+
+        global plurk_index
+        plurk_index += 1
         f.write(
-            post_time
+            f"{plurk_index:04d}"
+            + "=="
+            + post_time
             + "=="
             + plurk["content_raw"].replace("\n", replaced_newline)
             + "\n"
@@ -90,6 +95,9 @@ def main():
     if "offset" not in globals():
         global offset
         offset = format_time_to_offset(datetime.datetime.now())
+
+    global plurk_index
+    plurk_index = 0
 
     response_json = get_plurks(user_id, offset)
     f = open(sys.argv[2], "w", encoding="utf-8")
