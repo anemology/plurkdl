@@ -46,7 +46,7 @@ def parse_plurks(response_json, f):
         global plurk_index
         plurk_index += 1
         f.write(
-            f"{plurk_index:04d}"
+            f"{plurk_index:05d}"
             + "=="
             + post_time
             + "=="
@@ -81,11 +81,27 @@ def change_timezone_local(time):
     return local_time.strftime("%Y-%m-%d %H:%M:%S")
 
 
+def reverse_order(file_name):
+    print("Reverse order...")
+    f = open(file_name, "r", encoding="utf-8")
+    contents = f.readlines()
+    f.close()
+    contents.reverse()
+
+    f = open(file_name, "w", encoding="utf-8")
+    index = 0
+    for c in contents:
+        index += 1
+        c = re.sub(r"^\d+", f"{index:05d}", c)
+        f.write(c)
+    f.close
+
+
 def main():
-    if len(sys.argv) != 3:
-        print("Please input two parameters.")
-        print(r"python plurkdl.py {username} {filename}")
-        print("ex. python plurkdl.py plurkwork result.txt")
+    if len(sys.argv) < 3:
+        print("Please input at least first two parameters.")
+        print(r"python plurkdl.py {username} {filename} {reverse}")
+        print("ex. python plurkdl.py plurkwork result.txt y")
         sys.exit(1)
 
     user_id = get_user_id(sys.argv[1])
@@ -106,6 +122,13 @@ def main():
         response_json = get_plurks(user_id, offset)
         pass
     f.close()
+
+    try:
+        if sys.argv[3].lower() == "y":
+            reverse_order(sys.argv[2])
+    except:
+        pass
+
     print("Done!!!")
 
 
