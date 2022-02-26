@@ -1,136 +1,121 @@
 # -*- coding: utf-8 -*-
 
-import requests
-import re
-import sys
+import argparse
 import datetime
-from datetime import timezone, timedelta
+import re
+from datetime import timezone
+
+import requests
 
 
-def get_user_id(nick_name):
-    r = requests.get("https://www.plurk.com/" + nick_name)
-    # parse html to get user_id
-    regex = r"\"user_id\"\:\s(\d+)"
-    match = re.search(regex, r.text)
-    userid = match.group(1)
-    return userid
+class Plurk:
+    def __init__(self, nick_name):
+        self.user_id = self._get_user_id(nick_name)
+        self.plurk_index = 0
+        # set offset to now for first time
+        self.offset = format_time_to_offset(datetime.datetime.now())
 
+    def download(self, filename):
+        """download plurks to file"""
+        f = open(filename, "w")
+        response_json = self.get_plurks()
+        while response_json:
+            self.parse_plurks(response_json, f)
+            response_json = self.get_plurks()
+        f.close()
 
-def get_plurks(user_id, offset):
-    """user_id,  plurk user id  
-    offset, get plurks before this time  
-    only_user = 1, get only this user's plurks, no replurk  
-    plurk only return 20 plurks once"""
-    print("Get Plurks...offset=" + offset)
-    postdata = {"user_id": user_id, "offset": offset, "only_user": "1"}
-    r = requests.post("https://www.plurk.com/TimeLine/getPlurks", data=postdata)
-    json_result = r.json()
+    def get_plurks(self):
+        """user_id,  plurk user id
+        offset, get plurks before this time
+        only_user = 1, get only this user's plurks, no replurk
+        plurk only return 20 plurks once"""
+        print("Get Plurks...offset=" + self.offset)
+        postdata = {"user_id": self.user_id, "offset": self.offset, "only_user": "1"}
+        r = requests.post("https://www.plurk.com/TimeLine/getPlurks", data=postdata)
+        json_result = r.json()
 
-    if "error" in json_result:
-        if json_result["error"] == "NoReadPermissionError":
-            print("This is a private timeline.")
-    elif "plurks" in json_result and not json_result["plurks"]:
-        print("Get Plurks...End")
-    else:
-        return json_result
+        if "error" in json_result:
+            if json_result["error"] == "NoReadPermissionError":
+                print("This is a private timeline.")
+        elif "plurks" in json_result and not json_result["plurks"]:
+            print("Get Plurks...End")
+        else:
+            return json_result
 
+    def parse_plurks(self, response_json, f):
+        """parse response json and write to file"""
+        plurks = response_json["plurks"]
+        
+        for plurk in plurks:
+            post_time = change_timezone_local(plurk["posted"])
+            plurk_content = plurk["content_raw"].replace("\n", " ")
 
-def parse_plurks(response_json, f):
-    """parse response json and write to file"""
-    plurks = response_json["plurks"]
-    for index, plurk in enumerate(plurks):
-        post_time = change_timezone_local(plurk["posted"])
-        replaced_newline = " "
-        # replaced_newline = "\n                     "
+            self.plurk_index += 1
+            f.write(f"{self.plurk_index:05d}=={post_time}=={plurk_content}\n")
 
-        global plurk_index
-        plurk_index += 1
-        f.write(
-            f"{plurk_index:05d}"
-            + "=="
-            + post_time
-            + "=="
-            + plurk["content_raw"].replace("\n", replaced_newline)
-            + "\n"
-        )
-        if index == len(plurks) - 1:
-            global offset
-            offset = format_time_to_offset(parse_time(plurk["posted"]))
+        self.offset = format_time_to_offset(parse_time(plurks[-1]["posted"]))
+
+    def _get_user_id(self, nick_name):
+        """parse html to get user_id"""
+        r = requests.get("https://www.plurk.com/" + nick_name)
+        regex = r'"user_id"\:\s(\d+)'
+        match = re.search(regex, r.text)
+        user_id = match.group(1)
+        return user_id
 
 
 def parse_time(time):
-    """parse original time from plurk"""
-    # Sat, 11 Jan 2020 01:14:29 GMT
-    # E, d MMM yyyy HH:mm:ss 'GMT'
-    # return datetime.datetime.strptime(time, "%a, %d %b %Y %H:%M:%S GMT")
+    """parse original time from plurk
+    e.g. 'Sat, 11 Jan 2020 01:14:29 GMT' string to datetime
+    """
     return datetime.datetime.strptime(time, "%a, %d %b %Y %H:%M:%S %Z")
 
 
 def format_time_to_offset(time):
-    """change time to plurk offset format"""
-    # Sat, 11 Jan 2020 01:14:29 GMT -> 2020-01-11T01:14:29.000Z
-    # yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
-    return time.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    """change time to plurk offset format
+    e.g. datetime to '2020-01-11T01:14:29.000Z' string
+    """
+    return time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
 def change_timezone_local(time):
-    """change to local time"""
+    """change datetime to local time string"""
     time = parse_time(time)
     local_time = time.replace(tzinfo=timezone.utc).astimezone(tz=None)
-    # return str(time.replace(tzinfo=timezone.utc).astimezone(tz=timezone(timedelta(hours=8))))
     return local_time.strftime("%Y-%m-%d %H:%M:%S")
 
 
-def reverse_order(file_name):
-    print("Reverse order...")
-    f = open(file_name, "r", encoding="utf-8")
-    contents = f.readlines()
-    f.close()
-    contents.reverse()
+def reverse_file(filename):
+    """reverse file contents with index"""
+    with open(filename, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+        lines.reverse()
 
-    f = open(file_name, "w", encoding="utf-8")
-    index = 0
-    for c in contents:
-        index += 1
-        c = re.sub(r"^\d+", f"{index:05d}", c)
-        f.write(c)
-    f.close
+        index = 0
+        with open(filename, "w", encoding="utf-8") as f:
+            for line in lines:
+                index += 1
+                # replace numbers start of line with index
+                line = re.sub(r"^\d+", f"{index:05d}", line)
+                f.write(line)
 
 
-def main():
-    if len(sys.argv) < 3:
-        print("Please input at least first two parameters.")
-        print(r"python plurkdl.py {username} {filename} {reverse}")
-        print("ex. python plurkdl.py plurkwork result.txt y")
-        sys.exit(1)
+def main(args):
+    filename = args.filename if args.filename else f"{args.username}.txt"
+    plurk = Plurk(args.username)
+    plurk.download(filename)
 
-    user_id = get_user_id(sys.argv[1])
-    print("User ID=" + user_id)
-
-    # set offset to now for first time
-    if "offset" not in globals():
-        global offset
-        offset = format_time_to_offset(datetime.datetime.now())
-
-    global plurk_index
-    plurk_index = 0
-
-    response_json = get_plurks(user_id, offset)
-    f = open(sys.argv[2], "w", encoding="utf-8")
-    while response_json is not None:
-        parse_plurks(response_json, f)
-        response_json = get_plurks(user_id, offset)
-        pass
-    f.close()
-
-    try:
-        if sys.argv[3].lower() == "y":
-            reverse_order(sys.argv[2])
-    except:
-        pass
+    if args.reverse:
+        reverse_file(filename)
 
     print("Done!!!")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Download plurk timeline.")
+    parser.add_argument("-u", "--username", help="plurk username", required=True)
+    parser.add_argument("-f", "--filename", help="output filename")
+    parser.add_argument("-r", "--reverse", help="reverse order", action="store_true")
+
+    args = parser.parse_args()
+    main(args)
