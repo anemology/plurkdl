@@ -13,7 +13,7 @@ class Plurk:
         self.user_id = self._get_user_id(nick_name)
         self.plurk_index = 0
         # set offset to now for first time
-        self.offset = format_time_to_offset(datetime.datetime.now())
+        self.offset = format_time_to_offset(datetime.datetime.utcnow())
 
     def download(self, filename):
         """download plurks to file"""
@@ -45,7 +45,7 @@ class Plurk:
     def parse_plurks(self, response_json, f):
         """parse response json and write to file"""
         plurks = response_json["plurks"]
-        
+
         for plurk in plurks:
             post_time = change_timezone_local(plurk["posted"])
             plurk_content = plurk["content_raw"].replace("\n", " ")
