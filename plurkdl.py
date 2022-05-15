@@ -48,7 +48,7 @@ class Plurk:
 
         for plurk in plurks:
             post_time = change_timezone_local(plurk["posted"])
-            plurk_content = plurk["content_raw"].replace("\n", " ")
+            plurk_content = plurk["content_raw"].replace("\r\n", " ").replace("\n", " ")
 
             self.plurk_index += 1
             f.write(f"{self.plurk_index:05d}=={post_time}=={plurk_content}\n")
