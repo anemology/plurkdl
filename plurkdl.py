@@ -3,9 +3,12 @@
 import argparse
 import datetime
 import re
+import string
 from datetime import timezone
 
 import requests
+
+LETTERS = string.digits + string.ascii_lowercase
 
 
 class Plurk:
@@ -23,6 +26,10 @@ class Plurk:
             self.parse_plurks(response_json, f)
             response_json = self.get_plurks()
         f.close()
+
+    def permalink(self, plurk_id: int) -> str:
+        """get permalink from plurk_id"""
+        return f"https://www.plurk.com/p/{to_base36(plurk_id)}"
 
     def get_plurks(self):
         """user_id,  plurk user id
@@ -98,6 +105,22 @@ def reverse_file(filename):
                 # replace numbers start of line with index
                 line = re.sub(r"^\d+", f"{index:05d}", line)
                 f.write(line)
+
+
+def to_base36(n: int) -> str:
+    """Convert positive integer to base 36 string.
+
+    Ref: https://stackoverflow.com/questions/2267362/how-to-convert-an-integer-to-a-string-in-any-base
+    """
+    digits = []
+
+    while n:
+        digits.append(LETTERS[n % 36])
+        n = n // 36
+
+    digits.reverse()
+
+    return "".join(digits)
 
 
 def main(args):
