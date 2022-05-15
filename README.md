@@ -4,25 +4,39 @@ Download specific user's plurks from [plurk.com](https://www.plurk.com).
 
 ## Usage
 
-### Linux
+```bash
+usage: plurkdl.py [-h] -u USERNAME [-f FILENAME] [-r]
+
+Download plurk timeline.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -u USERNAME, --username USERNAME
+                        plurk username
+  -f FILENAME, --filename FILENAME
+                        output filename
+  -r, --reverse         reverse order
+```
+
+### Example
 
 ```python
-python -m pip install requests
-# python plurkdl.py {username} {filename} {reverse}
-python plurkdl.py plurkwork plurkwork.txt y
+python -m pip install -r requirements.txt
+python plurkdl.py --username plurkwork --filename plurkwork.txt --reverse
 ```
 
 `reverse` is a optional parameter. It will reverse the line order, default is newest first.
 
-### Windows
+## TODO
 
-Download `.exe` from [release](https://github.com/anemology/plurkdl/release) and run in commandline.
-
-```bat
-plurkdl.exe plurkwork plurkwork.txt y
-```
+[ ] Output file format: csv/json  
+[ ] Add url on every plurk
 
 ## Changelog
+
+### v1.2.0 - 2022-02-26
+
+Change command line parameters, see `Usage` for details.
 
 ### v1.1 - 2020-07-04
 
