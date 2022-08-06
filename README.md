@@ -36,6 +36,8 @@ python plurkdl.py --username plurkwork -f txt -f json -f csv
 - [ ] Download resources, such as emoticons, avatars, images etc.
 - [ ] Download response.
 - [ ] Output file format: html, like [backup](https://www.plurk.com/settings/backup) from plurk website.
+- [ ] Update existing json and csv file to newest data. Base on plurk id or time (a month ago?).
+- [ ] Save plurks to database (SQLite).
 
 ## Changelog
 
